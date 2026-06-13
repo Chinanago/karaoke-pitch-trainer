@@ -72,6 +72,32 @@ export function prepareReference(reference: Reference): PreparedReference {
   };
 }
 
+export function transposeReference(
+  reference: PreparedReference,
+  semitones: number
+): PreparedReference {
+  if (semitones === 0) {
+    return reference;
+  }
+
+  const notes = reference.notes.map<TimedRefNote>((note) => {
+    const transposedNote = asMidi(Number(note.note) + semitones);
+    return {
+      ...note,
+      note: transposedNote,
+      freq: midiToHz(transposedNote, reference.ref_a4)
+    };
+  });
+  const midiValues = notes.map((note) => Number(note.note));
+
+  return {
+    ...reference,
+    notes,
+    minMidi: asMidi(Math.min(...midiValues)),
+    maxMidi: asMidi(Math.max(...midiValues))
+  };
+}
+
 export function beatToSeconds(beat: Beat, tempoBpm: number) {
   return asSeconds((Number(beat) * 60) / tempoBpm);
 }

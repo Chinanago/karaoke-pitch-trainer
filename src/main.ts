@@ -1,7 +1,7 @@
 import './styles.css';
 import { createAudioInput, type AudioInputController, type AudioPitchMessage } from './audioInput';
 import { scheduleCountInClicks, scheduleGuideTone, type GuideTonePlayback } from './guideTone';
-import { loadReference } from './reference';
+import { loadReference, transposeReference } from './reference';
 import { PitchRenderer } from './renderer';
 import { SessionScorer, type ScoreSnapshot } from './scorer';
 import { asSeconds, type Hz, type JudgedPitchSample, type PreparedReference } from './types';
@@ -26,6 +26,7 @@ const SONGS: Song[] = [
 
 const canvas = getElement<HTMLCanvasElement>('pitch-canvas');
 const songSelect = getElement<HTMLSelectElement>('song-select');
+const transposeSelect = getElement<HTMLSelectElement>('transpose-select');
 const startButton = getElement<HTMLButtonElement>('start-button');
 const stopButton = getElement<HTMLButtonElement>('stop-button');
 const retryButton = getElement<HTMLButtonElement>('retry-button');
@@ -68,13 +69,17 @@ guideToggle.addEventListener('change', () => {
   syncGuideTone();
 });
 
+transposeSelect.addEventListener('change', () => {
+  if (!running) {
+    void resetReferencePreview();
+  }
+});
+
 void initialize();
 
 async function initialize(): Promise<void> {
   populateSongs();
-  reference = await loadSelectedReference();
-  renderer.setReference(reference);
-  renderer.render(0);
+  await resetReferencePreview();
 }
 
 async function startSession(): Promise<void> {
@@ -283,7 +288,15 @@ function updateInputLevel(rms: number): void {
 
 async function loadSelectedReference(): Promise<PreparedReference> {
   const song = SONGS.find((candidate) => candidate.id === songSelect.value) ?? SONGS[0];
-  return loadReference(song.url);
+  const baseReference = await loadReference(song.url);
+  return transposeReference(baseReference, Number(transposeSelect.value));
+}
+
+async function resetReferencePreview(): Promise<void> {
+  reference = await loadSelectedReference();
+  renderer.setReference(reference);
+  resetScores();
+  renderer.render(0);
 }
 
 function populateSongs(): void {
@@ -308,6 +321,7 @@ function setControls(state: {
   stopButton.disabled = !state.running;
   retryButton.hidden = !state.finished;
   songSelect.disabled = Boolean(state.starting || state.running);
+  transposeSelect.disabled = Boolean(state.starting || state.running);
   guideToggle.disabled = Boolean(state.starting);
 }
 
