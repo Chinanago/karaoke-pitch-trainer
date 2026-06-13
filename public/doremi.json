@@ -1,0 +1,15 @@
+{
+  "tempo_bpm": 100,
+  "ref_a4": 440.0,
+  "notes": [
+    { "start": 0.0, "dur": 1.0, "note": 60 },
+    { "start": 1.0, "dur": 1.0, "note": 62 },
+    { "start": 2.0, "dur": 1.0, "note": 64 },
+    { "start": 3.0, "dur": 1.0, "note": 65 },
+    { "start": 4.0, "dur": 1.0, "note": 67 },
+    { "start": 5.0, "dur": 1.0, "note": 65 },
+    { "start": 6.0, "dur": 1.0, "note": 64 },
+    { "start": 7.0, "dur": 1.0, "note": 62 },
+    { "start": 8.0, "dur": 2.0, "note": 60 }
+  ]
+}

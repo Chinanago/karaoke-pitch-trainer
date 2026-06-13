@@ -16,9 +16,9 @@ type Song = {
 
 const SONGS: Song[] = [
   {
-    id: 'furusato',
-    title: 'ふるさと',
-    url: `${import.meta.env.BASE_URL}furusato.json`,
+    id: 'doremi',
+    title: 'ドレミ音階',
+    url: `${import.meta.env.BASE_URL}doremi.json`,
     free: true,
     license: 'PD'
   }

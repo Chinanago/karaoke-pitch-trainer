@@ -7,7 +7,7 @@
 - Vite + TypeScript の素の DOM アプリ
 - Web Audio API + AudioWorklet によるブラウザ内ピッチ検出
 - Canvas 2D の横スクロール音程バー
-- パブリックドメイン曲「ふるさと」冒頭のお手本データ
+- 単純なドレミ音階のお手本データ
 - GitHub Pages への Actions 自動デプロイ
 
 音声はサーバーへ送信されません。すべてブラウザ内で処理されます。
