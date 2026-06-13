@@ -1,8 +1,9 @@
 import './styles.css';
 import { createAudioInput, type AudioInputController, type AudioPitchMessage } from './audioInput';
+import { scheduleGuideTone, type GuideTonePlayback } from './guideTone';
 import { loadReference } from './reference';
 import { PitchRenderer } from './renderer';
-import { judgePitch, SessionScorer, type ScoreSnapshot } from './scorer';
+import { SessionScorer, type ScoreSnapshot } from './scorer';
 import { asSeconds, type Hz, type JudgedPitchSample, type PreparedReference } from './types';
 
 type Song = {
@@ -28,6 +29,7 @@ const songSelect = getElement<HTMLSelectElement>('song-select');
 const startButton = getElement<HTMLButtonElement>('start-button');
 const stopButton = getElement<HTMLButtonElement>('stop-button');
 const retryButton = getElement<HTMLButtonElement>('retry-button');
+const guideToggle = getElement<HTMLInputElement>('guide-toggle');
 const statusText = getElement<HTMLElement>('status');
 const pitchScore = getElement<HTMLElement>('pitch-score');
 const voiceScore = getElement<HTMLElement>('voice-score');
@@ -38,6 +40,7 @@ const renderer = new PitchRenderer({ canvas });
 let reference: PreparedReference | null = null;
 let scorer: SessionScorer | null = null;
 let audioInput: AudioInputController | null = null;
+let guideTone: GuideTonePlayback | null = null;
 let startAudioTime = 0;
 let animationFrame = 0;
 let smoothedFreq: Hz | null = null;
@@ -54,6 +57,10 @@ stopButton.addEventListener('click', () => {
 retryButton.addEventListener('click', () => {
   retryButton.hidden = true;
   void startSession();
+});
+
+guideToggle.addEventListener('change', () => {
+  syncGuideTone();
 });
 
 void initialize();
@@ -79,6 +86,7 @@ async function startSession(): Promise<void> {
     startAudioTime = audioInput.context.currentTime;
     smoothedFreq = null;
     running = true;
+    syncGuideTone();
 
     setControls({ running: true });
     setStatus('採点中');
@@ -99,6 +107,7 @@ async function finishSession(status: string): Promise<void> {
     await audioInput.stop();
     audioInput = null;
   }
+  stopGuideTone();
 
   updateScores(scorer?.snapshot() ?? null);
   setControls({ finished: true });
@@ -118,6 +127,23 @@ function tick(): void {
   }
 
   animationFrame = requestAnimationFrame(tick);
+}
+
+function syncGuideTone(): void {
+  stopGuideTone();
+  if (!running || !audioInput || !reference || !guideToggle.checked) {
+    return;
+  }
+
+  const elapsed = Math.max(0, audioInput.context.currentTime - startAudioTime);
+  guideTone = scheduleGuideTone(audioInput.context, reference, startAudioTime, elapsed);
+}
+
+function stopGuideTone(): void {
+  if (guideTone) {
+    guideTone.stop();
+    guideTone = null;
+  }
 }
 
 function handlePitch(message: AudioPitchMessage): void {

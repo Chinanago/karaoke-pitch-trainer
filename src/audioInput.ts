@@ -20,16 +20,16 @@ type WorkletMessage = {
   rms: number;
 };
 
+const rawVocalConstraints: MediaTrackConstraints = {
+  echoCancellation: false,
+  noiseSuppression: false,
+  autoGainControl: false
+};
+
 export async function createAudioInput(
   onPitch: (message: AudioPitchMessage) => void
 ): Promise<AudioInputController> {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: {
-      echoCancellation: false,
-      noiseSuppression: false,
-      autoGainControl: false
-    }
-  });
+  const stream = await getVocalStream();
 
   const context = new AudioContext({ latencyHint: 'interactive' });
   await context.audioWorklet.addModule(pitchProcessorUrl);
@@ -71,4 +71,28 @@ export async function createAudioInput(
       await context.close();
     }
   };
+}
+
+async function getVocalStream(): Promise<MediaStream> {
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      // Disable speech-call processing because it can reshape sung vowels and
+      // destabilize f0 detection. Some browsers ignore these hints.
+      audio: rawVocalConstraints
+    });
+  } catch (error) {
+    if (isConstraintFailure(error)) {
+      return navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+    throw error;
+  }
+}
+
+function isConstraintFailure(error: unknown): boolean {
+  return (
+    error instanceof DOMException &&
+    (error.name === 'OverconstrainedError' ||
+      error.name === 'ConstraintNotSatisfiedError' ||
+      error.name === 'TypeError')
+  );
 }

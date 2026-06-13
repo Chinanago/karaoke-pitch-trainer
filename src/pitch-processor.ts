@@ -16,12 +16,15 @@ declare class AudioWorkletProcessor {
   ): boolean;
 }
 
-const FRAME_SIZE = 2048;
+// Larger windows stabilize low voices but add latency. Smaller windows react
+// faster but make 100-150Hz detection less stable.
+const FRAME_SIZE = 4096;
 const HOP_SIZE = 512;
 const MIN_RMS = 0.01;
-const MIN_CLARITY = 0.76;
-const MIN_VOICE_HZ = 60;
-const MAX_VOICE_HZ = 1200;
+// Lower this if recognition is still too strict on real microphones.
+const MIN_CLARITY = 0.65;
+const MIN_VOICE_HZ = 70;
+const MAX_VOICE_HZ = 1100;
 
 class PitchProcessor extends AudioWorkletProcessor {
   private readonly frame = new Float32Array(FRAME_SIZE);
