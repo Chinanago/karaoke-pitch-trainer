@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="カラオケ採点向けのリアルタイム音程トレーナー"
+    />
+    <title>Karaoke Pitch Trainer</title>
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Karaoke Pitch Trainer</p>
+          <h1>音程採点トレーナー</h1>
+        </div>
+        <div class="status-pill" id="status">待機中</div>
+      </header>
+
+      <main class="workspace">
+        <section class="control-panel" aria-label="セッション操作">
+          <label class="field">
+            <span>曲</span>
+            <select id="song-select">
+              <option value="furusato">ふるさと</option>
+            </select>
+          </label>
+
+          <div class="button-row">
+            <button id="start-button" type="button" class="primary-button">
+              マイクを許可して開始
+            </button>
+            <button id="stop-button" type="button" class="secondary-button" disabled>
+              停止
+            </button>
+            <button id="retry-button" type="button" class="secondary-button" hidden>
+              もう一度
+            </button>
+          </div>
+
+          <div class="meter-grid" aria-label="採点">
+            <div class="meter-box">
+              <span class="meter-label">音程正確率</span>
+              <strong id="pitch-score">--%</strong>
+            </div>
+            <div class="meter-box">
+              <span class="meter-label">発声率</span>
+              <strong id="voice-score">--%</strong>
+            </div>
+            <div class="meter-box">
+              <span class="meter-label">ピッチ</span>
+              <strong id="pitch-readout">--</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="chart-panel" aria-label="音程バー">
+          <canvas id="pitch-canvas"></canvas>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
