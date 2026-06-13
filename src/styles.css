@@ -96,6 +96,17 @@ h1 {
   font-weight: 700;
 }
 
+.control-group {
+  display: grid;
+  gap: 8px;
+}
+
+.control-label {
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 select {
   width: 100%;
   min-height: 42px;
@@ -104,6 +115,71 @@ select {
   border-radius: 6px;
   background: #ffffff;
   color: #111827;
+}
+
+.key-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr minmax(72px, auto) 1fr 1fr;
+  gap: 6px;
+  align-items: center;
+}
+
+.mini-button {
+  min-height: 36px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #1f2937;
+  font-weight: 900;
+}
+
+.mini-button:not(:disabled):hover {
+  background: #e9eef5;
+}
+
+.key-display {
+  display: grid;
+  min-height: 36px;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.segmented-control {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 6px;
+}
+
+.segmented-control label {
+  display: grid;
+}
+
+.segmented-control input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented-control span {
+  display: grid;
+  min-height: 36px;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #1f2937;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.segmented-control input:checked + span {
+  border-color: #0f766e;
+  background: #dff7f1;
+  color: #0f4f49;
 }
 
 .toggle-row {

@@ -5,6 +5,8 @@ type RendererOptions = {
   canvas: HTMLCanvasElement;
 };
 
+export type PitchDisplayMode = 'continuous' | 'discrete';
+
 const COLORS: Record<PitchState, string> = {
   hit: '#1f9d6b',
   sharp: '#d84747',
@@ -18,6 +20,8 @@ export class PitchRenderer {
   private readonly ctx: CanvasRenderingContext2D;
   private reference: PreparedReference | null = null;
   private samples: JudgedPitchSample[] = [];
+  private displayMode: PitchDisplayMode = 'continuous';
+  private toleranceCents = 25;
   private width = 0;
   private height = 0;
   private dpr = 1;
@@ -46,6 +50,14 @@ export class PitchRenderer {
 
   clearSamples(): void {
     this.samples = [];
+  }
+
+  setDisplayMode(displayMode: PitchDisplayMode): void {
+    this.displayMode = displayMode;
+  }
+
+  setToleranceCents(toleranceCents: number): void {
+    this.toleranceCents = toleranceCents;
   }
 
   render(currentTimeSec: number): void {
@@ -176,8 +188,11 @@ export class PitchRenderer {
         continue;
       }
 
-      const y = this.midiToY(Number(hzToMidi(sample.freq as Hz)), metrics);
-      const color = COLORS[sample.state];
+      const rawMidi = Number(hzToMidi(sample.freq as Hz));
+      const displayMidi = this.displayMode === 'discrete' ? Math.round(rawMidi) : rawMidi;
+      const y = this.midiToY(displayMidi, metrics);
+      const state = this.getSampleState(sample);
+      const color = COLORS[state];
 
       if (previous && Math.abs(previous.x - x) < metrics.pxPerSec * 0.4) {
         this.ctx.strokeStyle = color;
@@ -185,6 +200,9 @@ export class PitchRenderer {
         this.ctx.lineCap = 'round';
         this.ctx.beginPath();
         this.ctx.moveTo(previous.x, previous.y);
+        if (this.displayMode === 'discrete') {
+          this.ctx.lineTo(x, previous.y);
+        }
         this.ctx.lineTo(x, y);
         this.ctx.stroke();
       }
@@ -195,6 +213,22 @@ export class PitchRenderer {
       this.ctx.fill();
       previous = { x, y, color };
     }
+  }
+
+  private getSampleState(sample: JudgedPitchSample): PitchState {
+    if (!sample.freq) {
+      return 'silent';
+    }
+
+    if (sample.cents === null) {
+      return sample.state;
+    }
+
+    if (Math.abs(Number(sample.cents)) <= this.toleranceCents) {
+      return 'hit';
+    }
+
+    return Number(sample.cents) > 0 ? 'sharp' : 'flat';
   }
 
   private drawPlayhead(x: number): void {

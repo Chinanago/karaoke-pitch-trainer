@@ -2,7 +2,7 @@ import './styles.css';
 import { createAudioInput, type AudioInputController, type AudioPitchMessage } from './audioInput';
 import { scheduleCountInClicks, scheduleGuideTone, type GuideTonePlayback } from './guideTone';
 import { loadReference, transposeReference } from './reference';
-import { PitchRenderer } from './renderer';
+import { PitchRenderer, type PitchDisplayMode } from './renderer';
 import { SessionScorer, type ScoreSnapshot } from './scorer';
 import { asSeconds, type Hz, type JudgedPitchSample, type PreparedReference } from './types';
 
@@ -26,7 +26,11 @@ const SONGS: Song[] = [
 
 const canvas = getElement<HTMLCanvasElement>('pitch-canvas');
 const songSelect = getElement<HTMLSelectElement>('song-select');
-const transposeSelect = getElement<HTMLSelectElement>('transpose-select');
+const flatButton = getElement<HTMLButtonElement>('flat-button');
+const sharpButton = getElement<HTMLButtonElement>('sharp-button');
+const octaveDownButton = getElement<HTMLButtonElement>('octave-down-button');
+const octaveUpButton = getElement<HTMLButtonElement>('octave-up-button');
+const transposeDisplay = getElement<HTMLElement>('transpose-display');
 const startButton = getElement<HTMLButtonElement>('start-button');
 const stopButton = getElement<HTMLButtonElement>('stop-button');
 const retryButton = getElement<HTMLButtonElement>('retry-button');
@@ -41,6 +45,7 @@ const renderer = new PitchRenderer({ canvas });
 const COUNTDOWN_BEATS = 3;
 const SESSION_START_SAFETY_SEC = 0.08;
 const INPUT_LEVEL_FULL_SCALE_RMS = 0.14;
+const DEFAULT_TOLERANCE_CENTS = 25;
 
 let reference: PreparedReference | null = null;
 let scorer: SessionScorer | null = null;
@@ -49,6 +54,9 @@ let guideTone: GuideTonePlayback | null = null;
 let countInTone: GuideTonePlayback | null = null;
 let startAudioTime = 0;
 let animationFrame = 0;
+let renderTimeSec = 0;
+let transposeSemitones = 0;
+let toleranceCents = DEFAULT_TOLERANCE_CENTS;
 let smoothedFreq: Hz | null = null;
 let running = false;
 
@@ -69,16 +77,44 @@ guideToggle.addEventListener('change', () => {
   syncGuideTone();
 });
 
-transposeSelect.addEventListener('change', () => {
-  if (!running) {
-    void resetReferencePreview();
-  }
+flatButton.addEventListener('click', () => {
+  updateTranspose(transposeSemitones - 1);
+});
+
+sharpButton.addEventListener('click', () => {
+  updateTranspose(transposeSemitones + 1);
+});
+
+octaveDownButton.addEventListener('click', () => {
+  updateTranspose(transposeSemitones - 12);
+});
+
+octaveUpButton.addEventListener('click', () => {
+  updateTranspose(transposeSemitones + 12);
+});
+
+document.querySelectorAll<HTMLInputElement>('input[name="pitch-display"]').forEach((input) => {
+  input.addEventListener('change', () => {
+    if (input.checked) {
+      updateDisplayMode(input.value as PitchDisplayMode);
+    }
+  });
+});
+
+document.querySelectorAll<HTMLInputElement>('input[name="tolerance"]').forEach((input) => {
+  input.addEventListener('change', () => {
+    if (input.checked) {
+      updateTolerance(Number(input.value));
+    }
+  });
 });
 
 void initialize();
 
 async function initialize(): Promise<void> {
   populateSongs();
+  updateTransposeDisplay();
+  renderer.setToleranceCents(toleranceCents);
   await resetReferencePreview();
 }
 
@@ -137,9 +173,10 @@ async function finishSession(status: string): Promise<void> {
     audioInput = null;
   }
 
-  updateScores(scorer?.snapshot() ?? null);
+  updateScores(scorer?.snapshot(toleranceCents) ?? null);
   if (reference) {
-    renderer.render(Number(reference.durationSec));
+    renderTimeSec = Number(reference.durationSec);
+    renderer.render(renderTimeSec);
   }
   setControls({ finished: true });
 }
@@ -150,6 +187,7 @@ function tick(): void {
   }
 
   const elapsed = Math.max(0, audioInput.context.currentTime - startAudioTime);
+  renderTimeSec = elapsed;
   renderer.render(elapsed);
 
   if (elapsed >= Number(reference.durationSec) + 0.4) {
@@ -230,7 +268,7 @@ function handlePitch(message: AudioPitchMessage): void {
   }
 
   const freq = smoothFreq(message.freq);
-  const judgement = scorer.addSample(timeSec, freq);
+  const judgement = scorer.addSample(timeSec, freq, toleranceCents);
   const sample: JudgedPitchSample = {
     time: asSeconds(timeSec),
     freq,
@@ -239,7 +277,7 @@ function handlePitch(message: AudioPitchMessage): void {
   };
 
   renderer.addSample(sample);
-  updateScores(scorer.snapshot());
+  updateScores(scorer.snapshot(toleranceCents));
 }
 
 function smoothFreq(freq: Hz | null): Hz | null {
@@ -289,14 +327,58 @@ function updateInputLevel(rms: number): void {
 async function loadSelectedReference(): Promise<PreparedReference> {
   const song = SONGS.find((candidate) => candidate.id === songSelect.value) ?? SONGS[0];
   const baseReference = await loadReference(song.url);
-  return transposeReference(baseReference, Number(transposeSelect.value));
+  return transposeReference(baseReference, transposeSemitones);
 }
 
 async function resetReferencePreview(): Promise<void> {
   reference = await loadSelectedReference();
   renderer.setReference(reference);
+  renderTimeSec = 0;
   resetScores();
   renderer.render(0);
+}
+
+function updateTranspose(nextSemitones: number): void {
+  if (running) {
+    return;
+  }
+
+  transposeSemitones = nextSemitones;
+  updateTransposeDisplay();
+  void resetReferencePreview();
+}
+
+function updateTransposeDisplay(): void {
+  if (transposeSemitones === 0) {
+    transposeDisplay.textContent = '0';
+    return;
+  }
+
+  if (transposeSemitones % 12 === 0) {
+    const octave = transposeSemitones / 12;
+    transposeDisplay.textContent = `${octave > 0 ? '+' : ''}${octave} oct`;
+    return;
+  }
+
+  transposeDisplay.textContent = `${transposeSemitones > 0 ? '+' : ''}${transposeSemitones}`;
+}
+
+function updateDisplayMode(displayMode: PitchDisplayMode): void {
+  renderer.setDisplayMode(displayMode);
+  renderCurrentFrame();
+}
+
+function updateTolerance(nextToleranceCents: number): void {
+  toleranceCents = nextToleranceCents;
+  renderer.setToleranceCents(toleranceCents);
+  updateScores(scorer?.snapshot(toleranceCents) ?? null);
+  renderCurrentFrame();
+}
+
+function renderCurrentFrame(): void {
+  if (reference) {
+    renderer.render(renderTimeSec);
+  }
 }
 
 function populateSongs(): void {
@@ -321,7 +403,10 @@ function setControls(state: {
   stopButton.disabled = !state.running;
   retryButton.hidden = !state.finished;
   songSelect.disabled = Boolean(state.starting || state.running);
-  transposeSelect.disabled = Boolean(state.starting || state.running);
+  flatButton.disabled = Boolean(state.starting || state.running);
+  sharpButton.disabled = Boolean(state.starting || state.running);
+  octaveDownButton.disabled = Boolean(state.starting || state.running);
+  octaveUpButton.disabled = Boolean(state.starting || state.running);
   guideToggle.disabled = Boolean(state.starting);
 }
 

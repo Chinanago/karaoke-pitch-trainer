@@ -28,13 +28,48 @@
             </select>
           </label>
 
-          <label class="field">
-            <span>音域</span>
-            <select id="transpose-select">
-              <option value="-12" selected>1オクターブ下</option>
-              <option value="0">原音</option>
-            </select>
-          </label>
+          <div class="control-group" aria-label="キー変更">
+            <span class="control-label">キー</span>
+            <div class="key-controls">
+              <button id="octave-down-button" type="button" class="mini-button">-12</button>
+              <button id="flat-button" type="button" class="mini-button">♭</button>
+              <strong id="transpose-display" class="key-display">0</strong>
+              <button id="sharp-button" type="button" class="mini-button">♯</button>
+              <button id="octave-up-button" type="button" class="mini-button">+12</button>
+            </div>
+          </div>
+
+          <div class="control-group" aria-label="自声表示">
+            <span class="control-label">自声表示</span>
+            <div class="segmented-control">
+              <label>
+                <input type="radio" name="pitch-display" value="continuous" checked />
+                <span>連続</span>
+              </label>
+              <label>
+                <input type="radio" name="pitch-display" value="discrete" />
+                <span>離散</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="control-group" aria-label="OK許容幅">
+            <span class="control-label">OK幅</span>
+            <div class="segmented-control">
+              <label>
+                <input type="radio" name="tolerance" value="10" />
+                <span>±10</span>
+              </label>
+              <label>
+                <input type="radio" name="tolerance" value="25" checked />
+                <span>±25</span>
+              </label>
+              <label>
+                <input type="radio" name="tolerance" value="40" />
+                <span>±40</span>
+              </label>
+            </div>
+          </div>
 
           <label class="toggle-row">
             <input id="guide-toggle" type="checkbox" checked />

@@ -6,6 +6,12 @@ export type PitchJudgement = {
   cents: Cents | null;
 };
 
+type ScoredFrame = {
+  hasTarget: boolean;
+  voiced: boolean;
+  cents: Cents | null;
+};
+
 export type ScoreSnapshot = {
   targetFrames: number;
   voicedFrames: number;
@@ -18,7 +24,11 @@ export function centsBetween(freq: Hz, target: Hz): Cents {
   return asCents(1200 * Math.log2(Number(freq) / Number(target)));
 }
 
-export function judgePitch(freq: Hz | null, target: Hz | null): PitchJudgement {
+export function judgePitch(
+  freq: Hz | null,
+  target: Hz | null,
+  toleranceCents: number
+): PitchJudgement {
   if (!target) {
     return { state: 'none', cents: null };
   }
@@ -28,44 +38,47 @@ export function judgePitch(freq: Hz | null, target: Hz | null): PitchJudgement {
   }
 
   const cents = centsBetween(freq, target);
-  if (Math.abs(Number(cents)) <= 50) {
+  if (Math.abs(Number(cents)) <= toleranceCents) {
     return { state: 'hit', cents };
   }
 
-  return { state: Number(cents) > 50 ? 'sharp' : 'flat', cents };
+  return { state: Number(cents) > 0 ? 'sharp' : 'flat', cents };
 }
 
 export class SessionScorer {
-  private targetFrames = 0;
-  private voicedFrames = 0;
-  private hitFrames = 0;
+  private readonly frames: ScoredFrame[] = [];
 
   constructor(private readonly reference: PreparedReference) {}
 
-  addSample(timeSec: number, freq: Hz | null): PitchJudgement {
+  addSample(timeSec: number, freq: Hz | null, toleranceCents: number): PitchJudgement {
     const target = getTargetAt(this.reference, timeSec);
-    const judgement = judgePitch(freq, target?.freq ?? null);
+    const judgement = judgePitch(freq, target?.freq ?? null, toleranceCents);
 
     if (target) {
-      this.targetFrames += 1;
-      if (freq) {
-        this.voicedFrames += 1;
-      }
-      if (judgement.state === 'hit') {
-        this.hitFrames += 1;
-      }
+      this.frames.push({
+        hasTarget: true,
+        voiced: freq !== null,
+        cents: judgement.cents
+      });
     }
 
     return judgement;
   }
 
-  snapshot(): ScoreSnapshot {
+  snapshot(toleranceCents: number): ScoreSnapshot {
+    const targetFrames = this.frames.filter((frame) => frame.hasTarget).length;
+    const voicedFrames = this.frames.filter((frame) => frame.hasTarget && frame.voiced).length;
+    const hitFrames = this.frames.filter(
+      (frame) =>
+        frame.hasTarget && frame.cents !== null && Math.abs(Number(frame.cents)) <= toleranceCents
+    ).length;
+
     return {
-      targetFrames: this.targetFrames,
-      voicedFrames: this.voicedFrames,
-      hitFrames: this.hitFrames,
-      pitchAccuracy: this.targetFrames ? this.hitFrames / this.targetFrames : 0,
-      voicingRate: this.targetFrames ? this.voicedFrames / this.targetFrames : 0
+      targetFrames,
+      voicedFrames,
+      hitFrames,
+      pitchAccuracy: targetFrames ? hitFrames / targetFrames : 0,
+      voicingRate: targetFrames ? voicedFrames / targetFrames : 0
     };
   }
 }
