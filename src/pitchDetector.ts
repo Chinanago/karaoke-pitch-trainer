@@ -4,7 +4,7 @@ import { asHz, type Hz, type PitchDetector } from './types';
 const MIN_VOICE_HZ = 70;
 const MAX_VOICE_HZ = 1100;
 // Lower this if recognition is still too strict on real microphones.
-const DEFAULT_CLARITY = 0.65;
+const DEFAULT_CLARITY = 0.55;
 
 export class PitchyDetector implements PitchDetector {
   private detector: ReturnType<typeof PitchyDetectorCore.forFloat32Array> | null = null;

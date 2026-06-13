@@ -42,10 +42,6 @@ export class PitchRenderer {
 
   addSample(sample: JudgedPitchSample): void {
     this.samples.push(sample);
-    const cutoff = Number(sample.time) - 14;
-    while (this.samples.length && Number(this.samples[0].time) < cutoff) {
-      this.samples.shift();
-    }
   }
 
   clearSamples(): void {

@@ -22,7 +22,7 @@ const FRAME_SIZE = 4096;
 const HOP_SIZE = 512;
 const MIN_RMS = 0.01;
 // Lower this if recognition is still too strict on real microphones.
-const MIN_CLARITY = 0.65;
+const MIN_CLARITY = 0.55;
 const MIN_VOICE_HZ = 70;
 const MAX_VOICE_HZ = 1100;
 

@@ -26,6 +26,10 @@ const rawVocalConstraints: MediaTrackConstraints = {
   autoGainControl: false
 };
 
+// Raise this if normal singing is still too quiet for f0 detection; lower it
+// if loud singing clips or becomes unstable. This gain is detection-only.
+const INPUT_DETECTION_GAIN = 2.0;
+
 export async function createAudioInput(
   onPitch: (message: AudioPitchMessage) => void
 ): Promise<AudioInputController> {
@@ -35,6 +39,8 @@ export async function createAudioInput(
   await context.audioWorklet.addModule(pitchProcessorUrl);
 
   const source = context.createMediaStreamSource(stream);
+  const detectionGain = context.createGain();
+  detectionGain.gain.value = INPUT_DETECTION_GAIN;
   const processor = new AudioWorkletNode(context, 'pitch-processor', {
     numberOfInputs: 1,
     numberOfOutputs: 1,
@@ -52,7 +58,8 @@ export async function createAudioInput(
     });
   };
 
-  source.connect(processor);
+  source.connect(detectionGain);
+  detectionGain.connect(processor);
   processor.connect(silentSink);
   silentSink.connect(context.destination);
 
@@ -65,6 +72,7 @@ export async function createAudioInput(
     stop: async () => {
       processor.port.onmessage = null;
       processor.disconnect();
+      detectionGain.disconnect();
       source.disconnect();
       silentSink.disconnect();
       stream.getTracks().forEach((track) => track.stop());

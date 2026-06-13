@@ -54,9 +54,12 @@
               <span class="meter-label">発声率</span>
               <strong id="voice-score">--%</strong>
             </div>
-            <div class="meter-box">
-              <span class="meter-label">ピッチ</span>
-              <strong id="pitch-readout">--</strong>
+          </div>
+
+          <div class="level-meter" aria-label="入力レベル">
+            <span>入力レベル</span>
+            <div class="level-track">
+              <div id="input-level" class="level-fill"></div>
             </div>
           </div>
         </section>
@@ -65,6 +68,7 @@
           <canvas id="pitch-canvas"></canvas>
         </section>
       </main>
+      <div id="countdown" class="countdown-overlay" aria-live="polite" hidden></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
